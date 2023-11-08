@@ -44,11 +44,25 @@ const requestListener = async function (req, res) {
 	    for (a = 0; a < amount; a++) {
 		let idx = (a + bufferidx) % amount;
 		if (buffer[idx].timestamp > 0) {
-		    list.push({
-			"timestamp":buffer[idx].timestamp,
-			"contenttype":buffer[idx].contenttype,
-			"data":buffer[idx].data.toString("base64")
-		    });
+                    if (resize!=null) {
+	                var imgdata = await sharp(Buffer.from(buffer[idx].data))
+			    .resize({
+				    width: parseInt(resize.split(",")[0]),
+				    height: parseInt(resize.split(",")[1])
+			    })
+			    .toBuffer();
+		        list.push({
+			    "timestamp":buffer[idx].timestamp,
+			    "contenttype":buffer[idx].contenttype,
+			    "data":Buffer.from(imgdata).toString("base64")
+		        });
+                    } else {
+		        list.push({
+			    "timestamp":buffer[idx].timestamp,
+			    "contenttype":buffer[idx].contenttype,
+			    "data":buffer[idx].data.toString("base64")
+		        });
+                    }
 		}
 	    }
 	    //return current list of snapshots
@@ -84,12 +98,9 @@ const requestListener = async function (req, res) {
 		}
 	    }
 	    gif.finish();
-//	    gif.then((data) => {
-	        //return current list of snapshots
-	        res.setHeader("Content-Type", "application/json");
-	        res.writeHead(200);
-	        res.end(JSON.stringify({"data":gif.out.getData().toString("base64")}));
-//	    });
+	    res.setHeader("Content-Type", "application/json");
+	    res.writeHead(200);
+	    res.end(JSON.stringify({"data":gif.out.getData().toString("base64")}));
 
 	    break;
 	default:
@@ -117,23 +128,9 @@ const captureImages = function () {
         resp.on("end", () => {
 	    if (content_type.split("/")[0]=="image") {
                 bufferidx=(bufferidx+1)%amount;
-                if (resize!=null) {
-	            const image = sharp(Buffer.from(data.read()))
-			.resize({
-				width: parseInt(resize.split(",")[0]),
-				height: parseInt(resize.split(",")[1])
-			})
-			.toBuffer();
-	            image.then((img) => {
-	                buffer[bufferidx].timestamp = Date.now();
-	                buffer[bufferidx].contenttype = content_type;
-	                buffer[bufferidx].data = Buffer.from(img);
-	            });
-                } else {
-	            buffer[bufferidx].timestamp = Date.now();
-	            buffer[bufferidx].contenttype = content_type;
-	            buffer[bufferidx].data = Buffer.from(data.read());
-                }
+	        buffer[bufferidx].timestamp = Date.now();
+	        buffer[bufferidx].contenttype = content_type;
+	        buffer[bufferidx].data = Buffer.from(data.read());
 	    } else {
                 console.log("No image received, skipping");
 	    }
