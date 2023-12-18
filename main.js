@@ -41,29 +41,36 @@ const requestListener = async function (req, res) {
 	case "/frames":
             console.log("Serving buffered images as json array");
 	    let list = [];
-	    for (a = 0; a < amount; a++) {
-		let idx = (a + bufferidx) % amount;
-		if (buffer[idx].timestamp > 0) {
-                    if (resize!=null) {
-	                var imgdata = await sharp(Buffer.from(buffer[idx].data))
-			    .resize({
-				    width: parseInt(resize.split(",")[0]),
-				    height: parseInt(resize.split(",")[1])
-			    })
-			    .toBuffer();
-		        list.push({
-			    "timestamp":buffer[idx].timestamp,
-			    "contenttype":buffer[idx].contenttype,
-			    "data":Buffer.from(imgdata).toString("base64")
-		        });
-                    } else {
-		        list.push({
-			    "timestamp":buffer[idx].timestamp,
-			    "contenttype":buffer[idx].contenttype,
-			    "data":buffer[idx].data.toString("base64")
-		        });
-                    }
-		}
+	    var sortedbuffer = buffer.filter((x) => x.timestamp > 0);
+	    sortedbuffer.sort((a,b) => {
+	      if (a.timestamp < b.timestamp) {
+	        return -1;
+	      }
+	      if (a.timestamp > b.timestamp) {
+	        return 1;
+	      }
+	      return 0;
+	    });
+	    for (var a = 0; a < sortedbuffer.length; a++) {
+                if (resize!=null) {
+	            var imgdata = await sharp(Buffer.from(sortedbuffer[a].data))
+		        .resize({
+			    width: parseInt(resize.split(",")[0]),
+			    height: parseInt(resize.split(",")[1])
+			})
+			.toBuffer();
+		    list.push({
+			"timestamp":sortedbuffer[a].timestamp,
+			"contenttype":sortedbuffer[a].contenttype,
+			"data":Buffer.from(imgdata).toString("base64")
+		    });
+                } else {
+		    list.push({
+			"timestamp":sortedbuffer[a].timestamp,
+			"contenttype":sortedbuffer[a].contenttype,
+			"data":sortedbuffer[a].data.toString("base64")
+		    });
+                }
 	    }
 	    //return current list of snapshots
 	    res.setHeader("Content-Type", "application/json");
