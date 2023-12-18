@@ -83,20 +83,26 @@ const requestListener = async function (req, res) {
 	    gif.setDelay(interval);
 	    gif.setQuality(30);
 	    gif.setThreshold(20);
-	    for (a = 0; a < amount; a++) {
-		let idx = (a + bufferidx) % amount;
-		if (buffer[idx].timestamp > 0) {
-
-		    var imgdata = await sharp(Buffer.from(buffer[idx].data))
-			.resize({
-                                width: width,
-                                height: height
-                        })
-			.joinChannel(Buffer.alloc(width * height, 255), { raw: { channels: 1, width, height} })
-			.raw().toBuffer();
-		    gif.addFrame(imgdata);
-		}
-	    }
+	    var sortedbuffer = buffer.filter((x) => x.timestamp > 0);
+	    sortedbuffer.sort((a,b) => {
+	      if (a.timestamp < b.timestamp) {
+	        return -1;
+	      }
+	      if (a.timestamp > b.timestamp) {
+	        return 1;
+	      }
+	      return 0;
+	    });
+	    for (var a = 0; a < sortedbuffer.length; a++) {
+		var imgdata = await sharp(Buffer.from(sortedbuffer[a].data))
+		    .resize({
+                            width: width,
+                            height: height
+                    })
+		    .joinChannel(Buffer.alloc(width * height, 255), { raw: { channels: 1, width, height} })
+		    .raw().toBuffer();
+		gif.addFrame(imgdata);
+	    };
 	    gif.finish();
 	    res.setHeader("Content-Type", "application/json");
 	    res.writeHead(200);
