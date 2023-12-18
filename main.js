@@ -12,6 +12,10 @@ let amount = 10;
 let url = 'http://invalid-demo-url/';
 let interval = 1000;
 let resize = null;
+let gifskipframes = 1;
+if (process.env.GIFSKIPFRAMES) {
+    gifskipframes = parseInt(process.env.GIFSKIPFRAMES);
+}
 if (process.env.AMOUNT) {
     amount = parseInt(process.env.AMOUNT);
 }
@@ -101,6 +105,8 @@ const requestListener = async function (req, res) {
 	      return 0;
 	    });
 	    for (var a = 0; a < sortedbuffer.length; a++) {
+	        if (((sortedbuffer.length - a) % gifskipframes) == 0) {
+
 		var imgdata = await sharp(Buffer.from(sortedbuffer[a].data))
 		    .resize({
                             width: width,
@@ -109,6 +115,9 @@ const requestListener = async function (req, res) {
 		    .joinChannel(Buffer.alloc(width * height, 255), { raw: { channels: 1, width, height} })
 		    .raw().toBuffer();
 		gif.addFrame(imgdata);
+		console.log("Adding frame "+sortedbuffer[a].timestamp+" to animation");
+
+                }
 	    };
 	    gif.finish();
 	    res.setHeader("Content-Type", "application/json");
