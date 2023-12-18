@@ -106,17 +106,14 @@ const requestListener = async function (req, res) {
 	    });
 	    for (var a = 0; a < sortedbuffer.length; a++) {
 	        if (((sortedbuffer.length - a) % gifskipframes) == 0) {
-
-		var imgdata = await sharp(Buffer.from(sortedbuffer[a].data))
-		    .resize({
-                            width: width,
-                            height: height
-                    })
-		    .joinChannel(Buffer.alloc(width * height, 255), { raw: { channels: 1, width, height} })
-		    .raw().toBuffer();
-		gif.addFrame(imgdata);
-		console.log("Adding frame "+sortedbuffer[a].timestamp+" to animation");
-
+		    var imgdata = await sharp(Buffer.from(sortedbuffer[a].data))
+		        .resize({
+                                width: width,
+                                height: height
+                        })
+		        .joinChannel(Buffer.alloc(width * height, 255), { raw: { channels: 1, width, height} })
+		        .raw().toBuffer();
+		    gif.addFrame(imgdata);
                 }
 	    };
 	    gif.finish();
