@@ -41,7 +41,48 @@ for (a = 0; a < amount; a++) {
 }
 
 const requestListener = async function (req, res) {
-    switch (req.url) {
+    var url = req.url.split(".");
+    switch (url[0]) {
+	case "/frame":
+            console.log("Serving last image");
+	    var sortedbuffer = buffer.filter((x) => x.timestamp > 0);
+	    sortedbuffer.sort((a,b) => {
+	      if (a.timestamp < b.timestamp) {
+	        return -1;
+	      }
+	      if (a.timestamp > b.timestamp) {
+	        return 1;
+	      }
+	      return 0;
+	    });
+            if (resize!=null) {
+	        var imgdata = await sharp(Buffer.from(sortedbuffer[sortedbuffer.length-1].data))
+		    .resize({
+		        width: parseInt(resize.split(",")[0]),
+			height: parseInt(resize.split(",")[1])
+		    })
+		    .toBuffer();
+	        if (url[1]=="json") {
+	            res.setHeader("Content-Type", "application/json");
+	            res.writeHead(200);
+	            res.end(JSON.stringify({"data":Buffer.from(imgdata).toString("base64")}));
+		} else {
+	            res.setHeader("Content-Type", sortedbuffer[sortedbuffer.length-1].contenttype);
+	            res.writeHead(200);
+	            res.end(Buffer.from(imgdata));
+		}
+            } else {
+	        if (url[1]=="json") {
+	            res.setHeader("Content-Type", "application/json");
+	            res.writeHead(200);
+	            res.end(JSON.stringify({"data":sortedbuffer[sortedbuffer.length-1].data.toString("base64")}));
+		} else {
+	            res.setHeader("Content-Type", sortedbuffer[sortedbuffer.length-1].contenttype);
+	            res.writeHead(200);
+	            res.end(sortedbuffer[sortedbuffer.length-1].data);
+		}
+            }
+	    break;
 	case "/frames":
             console.log("Serving buffered images as json array");
 	    let list = [];
@@ -81,8 +122,8 @@ const requestListener = async function (req, res) {
 	    res.writeHead(200);
 	    res.end(JSON.stringify(list));
 	    break;
-	case "/gif":
-	    console.log("Serving animated gif as json data");
+	case "/animation":
+	    console.log("Serving animated gif");
 	    var gifimg = null;
 	    const image = sharp(buffer[bufferidx].data);
 	    const metadata = await image.metadata();
@@ -117,14 +158,20 @@ const requestListener = async function (req, res) {
                 }
 	    };
 	    gif.finish();
-	    res.setHeader("Content-Type", "application/json");
-	    res.writeHead(200);
-	    res.end(JSON.stringify({"data":gif.out.getData().toString("base64")}));
+	    if (url[1]=="gif") {
+	        res.setHeader("Content-Type", "image/gif");
+	        res.writeHead(200);
+	        res.end(gif.out.getData());
+	    } else {
+	        res.setHeader("Content-Type", "application/json");
+	        res.writeHead(200);
+	        res.end(JSON.stringify({"data":gif.out.getData().toString("base64")}));
+	    }
 
 	    break;
 	default:
 	    res.writeHead(200);
-	    res.end("Use endpoints /frames or /gif");
+	    res.end("Use endpoints /frame, /frames(.json) or animation.json/gif");
     }
 
 };
