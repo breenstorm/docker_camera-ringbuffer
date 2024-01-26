@@ -4,7 +4,7 @@ const Stream = require('stream').Transform;
 const gifencoder = require('gif-encoder-2');
 
 const host = '';
-const port = 8000;
+let port = 8000;
 
 let buffer = [];
 let bufferidx = 0;
@@ -13,6 +13,9 @@ let url = 'http://invalid-demo-url/';
 let interval = 1000;
 let resize = null;
 let gifskipframes = 1;
+if (process.env.PORT) {
+    port = parseInt(process.env.PORT);
+}
 if (process.env.GIFSKIPFRAMES) {
     gifskipframes = parseInt(process.env.GIFSKIPFRAMES);
 }
