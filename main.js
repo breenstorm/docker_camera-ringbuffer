@@ -173,8 +173,51 @@ const requestListener = async function (req, res) {
 
 	    break;
 	default:
-	    res.writeHead(200);
-	    res.end("Use endpoints /frame, /frames(.json) or animation.json/gif");
+	    if ((url[0].substring(0,6) == "/frame") && (url[0].length>6)) {
+		var sortedbuffer = buffer.filter((x) => x.timestamp > 0);
+		sortedbuffer.sort((a,b) => {
+		    if (a.timestamp < b.timestamp) {
+		        return -1;
+		    }
+		    if (a.timestamp > b.timestamp) {
+		        return 1;
+		    }
+		    return 0;
+		});
+		var imagenum = Math.max(0,Math.min(sortedbuffer.length-1,parseInt(url[0].substring(6))));
+	        console.log("Serving image from " + imagenum.toString() + " snapshots earlier");
+	        if (resize!=null) {
+		    var imgdata = await sharp(Buffer.from(sortedbuffer[sortedbuffer.length-1-imagenum].data))
+			.resize({
+			    width: parseInt(resize.split(",")[0]),
+			    weight: parseInt(resize.split(",")[1])
+			})
+			.toBuffer();
+		    if (url[1]=="json") {
+		        res.setHeader("Content-Type", "application/json");
+		        res.writeHead(200);
+		        res.end(JSON.stringify({"data":Buffer.from(imgdata).toString("base64")}));
+		    } else {
+		        res.setHeader("Content-Type", sortedbuffer[sortedbuffer.length-1-imagenum].contenttype);
+		        res.writeHead(200);
+		        res.end(Buffer.from(imgdata));
+		    }
+	        } else {
+		    if (url[1]=="json") {
+		        res.setHeader("Content-Type", "application/json");
+		        res.writeHead(200);
+		        res.end(JSON.stringify({"data":sortedbuffer[sortedbuffer.length-1-imagenum].data.toString("base64")}));
+		    } else {
+		        res.setHeader("Content-Type", sortedbuffer[sortedbuffer.length-1-imagenum].contenttype);
+		        res.writeHead(200);
+		        res.end(sortedbuffer[sortedbuffer.length-1-imagenum].data);
+		    }
+	        }
+
+	    } else {
+	        res.writeHead(200);
+	        res.end("Use endpoints /frame, /frames(.json) or animation.json/gif");
+	    }
     }
 
 };
